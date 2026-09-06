@@ -1,115 +1,123 @@
-import 'package:flutter/material.dart';
+const input = document.getElementById("messageInput");
+const chat = document.getElementById("chat");
+const welcome = document.getElementById("welcome");
 
-void main() {
-  runApp(const AnnuAI());
+function addMessage(text, type) {
+
+    const message = document.createElement("div");
+
+    message.className = "message " + type;
+
+    message.textContent = text;
+
+    chat.appendChild(message);
+
+    chat.scrollTop = chat.scrollHeight;
 }
 
-class AnnuAI extends StatelessWidget {
-  const AnnuAI({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Annu AI',
-      theme: ThemeData.dark(),
-      home: const ChatScreen(),
-    );
-  }
+function sendMessage() {
+
+    const text = input.value.trim();
+
+    if (!text) return;
+
+    welcome.style.display = "none";
+
+    addMessage(text, "user");
+
+    input.value = "";
+
+    // AI thinking
+    setTimeout(() => {
+
+        const answer = getAIResponse(text);
+
+        addMessage(answer, "ai");
+
+        speak(answer);
+
+    }, 700);
 }
 
-class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
 
-  @override
-  State<ChatScreen> createState() => _ChatScreenState();
+function getAIResponse(text) {
+
+    const msg = text.toLowerCase();
+
+    if (msg.includes("hello") ||
+        msg.includes("hi") ||
+        msg.includes("namaste")) {
+
+        return "Namaste! 👋 Main Annu AI hoon. Aapki kya help kar sakti hoon?";
+    }
+
+    if (msg.includes("naam")) {
+
+        return "Mera naam Annu AI hai 🤖";
+    }
+
+    if (msg.includes("kaise ho")) {
+
+        return "Main bilkul ready hoon! 😊 Aap mujhse koi bhi sawaal pooch sakte ho.";
+    }
+
+    if (msg.includes("time")) {
+
+        return "Abhi ka time: " +
+        new Date().toLocaleTimeString();
+    }
+
+    return "Aapne poocha: " + text +
+    "\n\nMain aapki help karne ke liye ready hoon 🤖\n\n" +
+    "Real AI model connect karne ke baad main advanced answers de sakungi.";
 }
 
-class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController controller = TextEditingController();
-  final List<Map<String, String>> messages = [];
 
-  void sendMessage() {
-    if (controller.text.trim().isEmpty) return;
+// Voice input
+function startVoice() {
 
-    setState(() {
-      messages.add({
-        "role": "user",
-        "text": controller.text.trim(),
-      });
-    });
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
 
-    controller.clear();
+    if (!SpeechRecognition) {
 
-    // Backend API yahan call hogi
-  }
+        alert("Aapke browser mein voice recognition supported nahi hai.");
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("🤖 Annu AI"),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final msg = messages[index];
+        return;
+    }
 
-                return Align(
-                  alignment: msg["role"] == "user"
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      color: msg["role"] == "user"
-                          ? Colors.blue
-                          : Colors.grey.shade800,
-                    ),
-                    child: Text(
-                      msg["text"]!,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+    const recognition = new SpeechRecognition();
 
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: controller,
-                      decoration: InputDecoration(
-                        hintText: "Ask Annu AI...",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FloatingActionButton(
-                    onPressed: sendMessage,
-                    child: const Icon(Icons.send),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    recognition.lang = "hi-IN";
+
+    recognition.start();
+
+    recognition.onresult = function(event) {
+
+        const voiceText =
+        event.results[0][0].transcript;
+
+        input.value = voiceText;
+
+        sendMessage();
+    };
 }
+
+
+// AI voice reply
+function speak(text) {
+
+    if (!("speechSynthesis" in window)) return;
+
+    const speech =
+    new SpeechSynthesisUtterance(text);
+
+    speech.lang = "hi-IN";
+
+    speech.rate = 0.95;
+
+    speechSynthesis.speak(speech);
+}
+          
