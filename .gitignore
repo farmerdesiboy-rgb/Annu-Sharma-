@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const AnnuAI());
@@ -14,109 +12,45 @@ class AnnuAI extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Annu AI',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.blue,
-      ),
-      home: const ChatPage(),
+      theme: ThemeData.dark(),
+      home: const ChatScreen(),
     );
   }
 }
 
-class ChatPage extends StatefulWidget {
-  const ChatPage({super.key});
+class ChatScreen extends StatefulWidget {
+  const ChatScreen({super.key});
 
   @override
-  State<ChatPage> createState() => _ChatPageState();
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatPageState extends State<ChatPage> {
-  final TextEditingController messageController = TextEditingController();
-
+class _ChatScreenState extends State<ChatScreen> {
+  final TextEditingController controller = TextEditingController();
   final List<Map<String, String>> messages = [];
 
-  // Yahan apni API key lagao
-  final String apiKey = "YOUR_OPENAI_API_KEY";
-
-  Future<void> sendMessage() async {
-    final text = messageController.text.trim();
-
-    if (text.isEmpty) return;
+  void sendMessage() {
+    if (controller.text.trim().isEmpty) return;
 
     setState(() {
       messages.add({
         "role": "user",
-        "text": text,
+        "text": controller.text.trim(),
       });
-      messageController.clear();
     });
 
-    try {
-      final response = await http.post(
-        Uri.parse("https://api.openai.com/v1/chat/completions"),
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $apiKey",
-        },
-        body: jsonEncode({
-          "model": "gpt-4o-mini",
-          "messages": [
-            {
-              "role": "system",
-              "content":
-                  "You are Annu AI, a helpful and friendly AI assistant."
-            },
-            ...messages.map((message) => {
-                  "role": message["role"] == "user"
-                      ? "user"
-                      : "assistant",
-                  "content": message["text"],
-                }),
-          ],
-        }),
-      );
+    controller.clear();
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        final aiReply =
-            data["choices"][0]["message"]["content"];
-
-        setState(() {
-          messages.add({
-            "role": "assistant",
-            "text": aiReply,
-          });
-        });
-      } else {
-        setState(() {
-          messages.add({
-            "role": "assistant",
-            "text": "Sorry, AI se response nahi aa raha.",
-          });
-        });
-      }
-    } catch (e) {
-      setState(() {
-        messages.add({
-          "role": "assistant",
-          "text": "Internet ya API connection check karo.",
-        });
-      });
-    }
+    // Backend API yahan call hogi
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "🤖 Annu AI",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text("🤖 Annu AI"),
         centerTitle: true,
       ),
-
       body: Column(
         children: [
           Expanded(
@@ -124,29 +58,23 @@ class _ChatPageState extends State<ChatPage> {
               padding: const EdgeInsets.all(12),
               itemCount: messages.length,
               itemBuilder: (context, index) {
-                final message = messages[index];
-                final isUser = message["role"] == "user";
+                final msg = messages[index];
 
                 return Align(
-                  alignment: isUser
+                  alignment: msg["role"] == "user"
                       ? Alignment.centerRight
                       : Alignment.centerLeft,
                   child: Container(
-                    margin: const EdgeInsets.symmetric(
-                      vertical: 6,
-                    ),
+                    margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.all(14),
-                    constraints: const BoxConstraints(
-                      maxWidth: 320,
-                    ),
                     decoration: BoxDecoration(
-                      color: isUser
-                          ? Colors.blue
-                          : Colors.grey[850],
                       borderRadius: BorderRadius.circular(18),
+                      color: msg["role"] == "user"
+                          ? Colors.blue
+                          : Colors.grey.shade800,
                     ),
                     child: Text(
-                      message["text"] ?? "",
+                      msg["text"]!,
                       style: const TextStyle(fontSize: 16),
                     ),
                   ),
@@ -157,32 +85,24 @@ class _ChatPageState extends State<ChatPage> {
 
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: messageController,
+                      controller: controller,
                       decoration: InputDecoration(
-                        hintText: "Annu AI se kuch pucho...",
-                        filled: true,
+                        hintText: "Ask Annu AI...",
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(25),
-                          borderSide: BorderSide.none,
                         ),
                       ),
-                      onSubmitted: (_) => sendMessage(),
                     ),
                   ),
-
                   const SizedBox(width: 8),
-
-                  CircleAvatar(
-                    radius: 25,
-                    child: IconButton(
-                      icon: const Icon(Icons.send),
-                      onPressed: sendMessage,
-                    ),
+                  FloatingActionButton(
+                    onPressed: sendMessage,
+                    child: const Icon(Icons.send),
                   ),
                 ],
               ),
