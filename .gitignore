@@ -1,34 +1,195 @@
-# Gradle files
-.gradle/
-build/
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
-# Local configuration file (sdk path, etc)
-local.properties
+void main() {
+  runApp(const AnnuAI());
+}
 
-# Log/OS Files
-*.log
+class AnnuAI extends StatelessWidget {
+  const AnnuAI({super.key});
 
-# Android Studio generated files and folders
-captures/
-.externalNativeBuild/
-.cxx/
-*.aab
-*.apk
-output-metadata.json
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Annu AI',
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        primarySwatch: Colors.blue,
+      ),
+      home: const ChatPage(),
+    );
+  }
+}
 
-# IntelliJ
-*.iml
-.idea/
-misc.xml
-deploymentTargetDropDown.xml
-render.experimental.xml
+class ChatPage extends StatefulWidget {
+  const ChatPage({super.key});
 
-# Keystore files
-*.jks
-*.keystore
+  @override
+  State<ChatPage> createState() => _ChatPageState();
+}
 
-# Google Services (e.g. APIs or Firebase)
-google-services.json
+class _ChatPageState extends State<ChatPage> {
+  final TextEditingController messageController = TextEditingController();
 
-# Android Profiling
-*.hprof
+  final List<Map<String, String>> messages = [];
+
+  // Yahan apni API key lagao
+  final String apiKey = "YOUR_OPENAI_API_KEY";
+
+  Future<void> sendMessage() async {
+    final text = messageController.text.trim();
+
+    if (text.isEmpty) return;
+
+    setState(() {
+      messages.add({
+        "role": "user",
+        "text": text,
+      });
+      messageController.clear();
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse("https://api.openai.com/v1/chat/completions"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $apiKey",
+        },
+        body: jsonEncode({
+          "model": "gpt-4o-mini",
+          "messages": [
+            {
+              "role": "system",
+              "content":
+                  "You are Annu AI, a helpful and friendly AI assistant."
+            },
+            ...messages.map((message) => {
+                  "role": message["role"] == "user"
+                      ? "user"
+                      : "assistant",
+                  "content": message["text"],
+                }),
+          ],
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        final aiReply =
+            data["choices"][0]["message"]["content"];
+
+        setState(() {
+          messages.add({
+            "role": "assistant",
+            "text": aiReply,
+          });
+        });
+      } else {
+        setState(() {
+          messages.add({
+            "role": "assistant",
+            "text": "Sorry, AI se response nahi aa raha.",
+          });
+        });
+      }
+    } catch (e) {
+      setState(() {
+        messages.add({
+          "role": "assistant",
+          "text": "Internet ya API connection check karo.",
+        });
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          "🤖 Annu AI",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+      ),
+
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: messages.length,
+              itemBuilder: (context, index) {
+                final message = messages[index];
+                final isUser = message["role"] == "user";
+
+                return Align(
+                  alignment: isUser
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                      vertical: 6,
+                    ),
+                    padding: const EdgeInsets.all(14),
+                    constraints: const BoxConstraints(
+                      maxWidth: 320,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isUser
+                          ? Colors.blue
+                          : Colors.grey[850],
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Text(
+                      message["text"] ?? "",
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: messageController,
+                      decoration: InputDecoration(
+                        hintText: "Annu AI se kuch pucho...",
+                        filled: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      onSubmitted: (_) => sendMessage(),
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  CircleAvatar(
+                    radius: 25,
+                    child: IconButton(
+                      icon: const Icon(Icons.send),
+                      onPressed: sendMessage,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
